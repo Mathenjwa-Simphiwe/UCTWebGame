@@ -1,3 +1,7 @@
 <Solution>
-  <Project Path="UCTWebGame/UCTWebGame.csproj" />
+  <Project Path="../../../../../../source/repos/UCTWebGame/frontend/frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="../../../../../../source/repos/UCTWebGame/UCTWebGame/UCTWebGame.csproj" />
 </Solution>
