@@ -4,9 +4,13 @@ namespace UCTWebGame.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+    public class GameController : ControllerBase
     {
-        private static readonly string[] Summaries =
+        private readonly GameEventService gameEventService;
+        public GameController(GameEventService gameEventService)
+        {
+            this.gameEventService = gameEventService;
+        }
         [
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         ];
