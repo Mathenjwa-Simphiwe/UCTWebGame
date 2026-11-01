@@ -1,0 +1,173 @@
+﻿[
+  {
+    "code": "RSA",
+
+    "name": "South Africa",
+
+    "Population": 59308690,
+    "startingSoldiers": 9
+
+  },
+  {
+    "code": "USA",
+    "name": "United States of America",
+    "Population": 331893745,
+    "startingSoldiers": 9
+  },
+
+  {
+    "code": "AUS",
+    "name": "Australia",
+    "Population": 25687041,
+    "startingSoldiers": 9
+  },
+
+  {
+    "code": "IND",
+    "name": "India",
+    "Population": 1380004385,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "CHN",
+    "name": "China",
+    "Population": 1439323776,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "BRA",
+    "name": "Brazil",
+    "Population": 212559417,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "RUS",
+    "name": "Russia",
+    "Population": 145912025,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "CAN",
+    "name": "Canada",
+    "Population": 38005238,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "FRA",
+    "name": "France",
+    "Population": 65273511,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "DEU",
+    "name": "Germany",
+    "Population": 83783942,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "JPN",
+    "name": "Japan",
+    "Population": 126476461,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "GBR",
+    "name": "United Kingdom",
+    "Population": 67886011,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "ITA",
+    "name": "Italy",
+    "Population": 60461826,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "ESP",
+    "name": "Spain",
+    "Population": 46754778,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "MEX",
+    "name": "Mexico",
+    "Population": 128932753,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "KOR",
+    "name": "South Korea",
+    "Population": 51269185,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "TUR",
+    "name": "Turkey",
+    "Population": 84339067,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "SAU",
+    "name": "Saudi Arabia",
+    "Population": 34813871,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "ARG",
+    "name": "Argentina",
+    "Population": 45195774,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "NGA",
+    "name": "Nigeria",
+    "Population": 206139587,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "EGY",
+    "name": "Egypt",
+    "Population": 102334404,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "IRN",
+    "name": "Iran",
+    "Population": 83992949,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "PAK",
+    "name": "Pakistan",
+    "Population": 220892331,
+    "startingSoldiers": 9
+  },
+  {
+    "code": "FK",
+    "name": "Falkland Islands",
+    "population": 3465,
+    "startingSoldiers": 1
+  },
+  {
+    "code": "TK",
+    "name": "Tokelau",
+    "population": 2691,
+    "startingSoldiers": 1
+  },
+  {
+    "code": "NU",
+    "name": "Niue",
+    "population": 1822,
+    "startingSoldiers": 1
+  },
+  {
+    "code": "VA",
+    "name": "Vatican City",
+    "population": 506,
+    "startingSoldiers": 1
+  }
+]
+
+
+  
+

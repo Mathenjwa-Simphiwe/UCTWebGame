@@ -44,8 +44,11 @@ namespace UCTWebGame.Models
         public List <Player> Players { get; set; } = new 
         PublicKey List<CountryState> Countries { get; set; } = new();
 
-        public PendingAttack PendingAttack { get; set; } 
+        public PendingAttack PendingAttack { get; set; }
 
+        // One attack per turn: set once an attack finishes (conquest or failure).
+        // The player may still transfer soldiers, then must end the turn with Skip.
+        public bool AttackUsedThisTurn { get; set; }
         public string? WinnerId { get; set; }
 
         //sequence for events saved in the game
