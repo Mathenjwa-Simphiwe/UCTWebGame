@@ -2,11 +2,11 @@
 
 namespace UCTWebGame.Engine;
 
-// Pure game rules: no database, no SignalR, no HTTP.
+// Pure game rules: no database, SignalR, or HTTP yet.
 // Every method changes the Game in place and returns something the caller can log or broadcast.
 // Rule violations throw InvalidOperationException (the controller turns these into 400s).
 //
-// Rule decisions 
+// Rule decisions (reminder for me so i dont get lost in the sauce)
 //  - Conquest bonus = Max(2, defender.StartingSoldiers / 2), using the country's ORIGINAL value
 //    (matches the India example in the brief). The bonus soldiers become the garrison of the
 //    conquered country; the player may then transfer more in from other countries.
@@ -27,7 +27,7 @@ public class GameEngine
 
     // ---------- Setup ----------
 
-    public Game StartGame(string ownerUserId, string chosenCountryCode, List<CountryInfo> pool)
+    public GameEvent StartGame(string ownerUserId, string chosenCountryCode, List<CountryInfo> pool)
     {
         var chosen = pool.FirstOrDefault(c => c.Code == chosenCountryCode)
             ?? throw new InvalidOperationException("Chosen country is not in the country list.");
@@ -37,7 +37,7 @@ public class GameEngine
             throw new InvalidOperationException("Not enough countries in the pool to start a game.");
 
         Shuffle(others);
-        var selected = new List<CountryInfo> { chosen };
+        var selected = new List<CountryState> { chosen };
         selected.AddRange(others.Take(9));
 
         var game = new Game
@@ -107,7 +107,7 @@ public class GameEngine
         BeginTurn(game);
     }
 
-    private void BeginTurn(Game game)
+    private void BeginTurn(GameEvent game)
     {
         var player = GetCurrentPlayer(game);
         game.PendingReinforcements = GetReinforcementCount(game, player.Id);
@@ -115,14 +115,14 @@ public class GameEngine
     }
 
     // 2 soldiers per country owned, from round 2 onward.
-    public int GetReinforcementCount(Game game, string playerId)
+    public int GetReinforcementCount(GameEvent game, string playerId)
     {
         if (game.Round < 2) return 0;
         return 2 * OwnedBy(game, playerId).Count();
     }
 
     // allocation: country code -> soldiers to add. Must total exactly PendingReinforcements.
-    public void ApplyReinforcements(Game game, string playerId, Dictionary<string, int> allocation)
+    public void ApplyReinforcements(GameEvent game, string playerId, Dictionary<string, int> allocation)
     {
         EnsureTurn(game, playerId);
         if (game.Phase != TurnPhase.Reinforce)
@@ -149,7 +149,7 @@ public class GameEngine
     }
 
     // Ends the turn (without attacking, or after the one attack is finished).
-    public void Skip(Game game, string playerId)
+    public void Skip(GameEvent game, string playerId)
     {
         EnsureTurn(game, playerId);
         if (game.Phase == TurnPhase.Attacking)
@@ -162,7 +162,7 @@ public class GameEngine
 
     // ---------- Attacking ----------
 
-    public void StartAttack(Game game, string playerId, string attackerCode, string defenderCode)
+    public void StartAttack(GameEvent game, string playerId, string attackerCode, string defenderCode)
     {
         EnsureTurn(game, playerId);
         if (game.Phase == TurnPhase.Reinforce)
@@ -192,7 +192,7 @@ public class GameEngine
     }
 
     // One round of dice for the pending attack.
-    public DiceRoundResult ResolveDiceRound(Game game)
+    public RoundResult ResolveDiceRound(GameEvent game)
     {
         if (game.Status != GameStatus.InProgress)
             throw new InvalidOperationException("The game is not in progress.");
@@ -208,7 +208,7 @@ public class GameEngine
         // Each side rolls one die per soldier fighting.
         int dice = Math.Min(attacker.Soldiers - 1, defender.Soldiers);
 
-        var result = new DiceRoundResult();
+        var result = new RoundResult();
         for (int i = 0; i < dice; i++) result.AttackerDice.Add(_dice.Roll());
         for (int i = 0; i < dice; i++) result.DefenderDice.Add(_dice.Roll());
 
@@ -255,7 +255,7 @@ public class GameEngine
     }
 
     // The player stops the attack. Their turn ends.
-    public void StopAttack(Game game, string playerId)
+    public void StopAttack(GameEvent game, string playerId)
     {
         EnsureTurn(game, playerId);
         if (game.Phase != TurnPhase.Attacking || game.PendingAttack == null)
@@ -266,7 +266,7 @@ public class GameEngine
     }
 
     // Defender changes owner and is garrisoned with the conquest bonus. Returns the bonus.
-    private int Conquer(Game game, CountryState attacker, CountryState defender)
+    private int Conquer(GameEvent game, CountryState attacker, CountryState defender)
     {
         int gained = Math.Max(2, defender.StartingSoldiers / 2);
 
@@ -278,7 +278,7 @@ public class GameEngine
     }
 
     // Attack finished (not stopped): the player may still transfer, then ends the turn.
-    private static void EndAttack(Game game)
+    private static void EndAttack(GameEvent game)
     {
         game.PendingAttack = null;
         game.AttackUsedThisTurn = true;
@@ -287,7 +287,7 @@ public class GameEngine
 
     // ---------- Moving soldiers ----------
 
-    public void Transfer(Game game, string playerId, string fromCode, string toCode, int amount)
+    public void Transfer(GameEvent game, string playerId, string fromCode, string toCode, int amount)
     {
         EnsureTurn(game, playerId);
         if (game.Phase == TurnPhase.Attacking)
@@ -313,21 +313,21 @@ public class GameEngine
 
     // ---------- Checks ----------
 
-    public void UpdateEliminations(Game game)
+    public void UpdateEliminations(GameEvent game)
     {
         foreach (var player in game.Players)
             player.Eliminated = !game.Countries.Any(c => c.OwnerId == player.Id);
     }
 
     // Winner = one player owns all countries.
-    public string? CheckWinner(Game game)
+    public string? CheckWinner(GameEvent game)
     {
         var firstOwner = game.Countries[0].OwnerId;
         return game.Countries.All(c => c.OwnerId == firstOwner) ? firstOwner : null;
     }
 
     // Finishes the game if someone has conquered the world, or the human has been eliminated.
-    private bool CheckGameOver(Game game)
+    private bool CheckGameOver(GameEvent game)
     {
         var winner = CheckWinner(game);
         if (winner != null)
@@ -350,17 +350,17 @@ public class GameEngine
 
     // ---------- Helpers ----------
 
-    private static Player GetPlayer(Game game, string playerId) =>
+    private static Player GetPlayer(GameEvent game, string playerId) =>
         game.Players.First(p => p.Id == playerId);
 
-    private static CountryState GetCountry(Game game, string code) =>
+    private static CountryState GetCountry(GameEvent game, string code) =>
         game.Countries.FirstOrDefault(c => c.Code == code)
         ?? throw new InvalidOperationException($"Unknown country '{code}'.");
 
-    private static IEnumerable<CountryState> OwnedBy(Game game, string playerId) =>
+    private static IEnumerable<CountryState> OwnedBy(GameEvent game, string playerId) =>
         game.Countries.Where(c => c.OwnerId == playerId);
 
-    private static void EnsureTurn(Game game, string playerId)
+    private static void EnsureTurn(GameEvent game, string playerId)
     {
         if (game.Status != GameStatus.InProgress)
             throw new InvalidOperationException("The game is not in progress.");
