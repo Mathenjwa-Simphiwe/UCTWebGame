@@ -40,13 +40,13 @@ public class GameEngine
         var selected = new List<CountryState> { chosen };
         selected.AddRange(others.Take(9));
 
-        var game = new Game
+        var game = new GameEvent
         {
-            OwnerUserId = ownerUserId,
+            UserId = ownerUserId,
             Status = GameStatus.InProgress,
             Round = 1,
             Phase = TurnPhase.Action,
-            CurrentTurnIndex = 0
+            CurrentTurns = 0
         };
 
         for (int i = 0; i < selected.Count; i++)
@@ -81,10 +81,10 @@ public class GameEngine
 
     // ---------- Turn flow ----------
 
-    public Player GetCurrentPlayer(Game game) => GetPlayer(game, game.TurnOrder[game.CurrentTurnIndex]);
+    public Player GetCurrentPlayer(GameEvent game) => GetPlayer(game, game.TurnOrder[game.CurrentTurns]);
 
     // Ends the current turn and starts the next non-eliminated player's turn.
-    public void AdvanceTurn(Game game)
+    public void AdvanceTurn(GameEvent game)
     {
         game.PendingAttack = null;
         game.AttackUsedThisTurn = false;
@@ -95,10 +95,10 @@ public class GameEngine
         int count = game.TurnOrder.Count;
         for (int step = 0; step < count; step++)
         {
-            game.CurrentTurnIndex++;
-            if (game.CurrentTurnIndex >= count)
+            game.CurrentTurns++;
+            if (game.CurrentTurns >= count)
             {
-                game.CurrentTurnIndex = 0;
+                game.CurrentTurns = 0;
                 game.Round++;
             }
             if (!GetCurrentPlayer(game).Eliminated) break;

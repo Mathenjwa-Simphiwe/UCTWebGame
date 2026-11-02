@@ -13,10 +13,10 @@ namespace UCTWebGame.Data
 
         //this method reads countries.json 
 
-        public static List<Country> LoadFromFile(string path)
+        public static List<CountryInfo> LoadFromFile(string path)
         {
             var json = File.ReadAllText(path);
-            var countries = JsonSerializer.Deserialize<List<Country>>(json, Options)
+            var countries = JsonSerializer.Deserialize<List<CountryInfo>>(json, Options)
                 ?? throw new InvalidOperationException("countries.json is empty or invalid.");
 
             // Recompute from population so the JSON can never disagree with the rules.

@@ -33,7 +33,7 @@ namespace UCTWebGame.Models
 
         public int CurrentTurns { get; set; } 
 
-        [BsonRepresentation(BsonType.String)])
+        [BsonRepresentation(BsonType.String)]
 
         public TurnPhase Phase { get; set; } = TurnPhase.Start;
 
@@ -41,8 +41,8 @@ namespace UCTWebGame.Models
 
         //State of the board, including the positions of all pieces, resources, and other relevant information.
 
-        public List <Player> Players { get; set; } = new 
-        PublicKey List<CountryState> Countries { get; set; } = new();
+        public List<Player> Players { get; set; } = new(); 
+        public List<CountryState> Countries { get; set; } = new();
 
         public PendingAttack PendingAttack { get; set; }
 
