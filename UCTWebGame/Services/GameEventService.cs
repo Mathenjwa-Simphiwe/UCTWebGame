@@ -1,73 +1,89 @@
-﻿namespace UCTWebGame.Data
+using MongoDB.Bson;
+using MongoDB.Driver;
+using UCTWebGame.Models;
+
+namespace UCTWebGame.Services;
+
+public sealed class GameEventService
 {
-    ///ROUGH DRAFT: This is a utility class to compute the odds of a single round of dice rolls in a battle.
-    public readonly struct BattleOdds
+    private readonly IMongoCollection<GameEvent> _games;
+
+    public GameEventService(MongoDbService mongo)
     {
-        private const int DefaultDieSides = 6;
+        _games = mongo.Games;
+    }
 
-        /// <summary>The number of attacker/defender die comparisons this round.</summary>
-        public int DicePairs { get; }
+    public async Task<GameEvent> CreateAsync(GameEvent game, CancellationToken cancellationToken = default)
+    {
+        if (!ObjectId.TryParse(game.UserId, out _))
+            throw new ArgumentException("Game owner must be a valid MongoDB user ID.", nameof(game));
 
-        /// <summary>The number of sides on each fair die.</summary>
-        public int DieSides { get; }
+        game.Id ??= ObjectId.GenerateNewId().ToString();
+        game.CreatedAt = DateTime.UtcNow;
+        game.UpdatedAt = game.CreatedAt;
+        game.Version = 1;
 
-        /// <summary>Chance that the attacker wins one comparison.</summary>
-        public double AttackerWinProbabilityPerPair { get; }
+        await _games.InsertOneAsync(game, cancellationToken: cancellationToken);
+        return game;
+    }
 
-        /// <summary>Chance that the defender wins one comparison.</summary>
-        public double DefenderWinProbabilityPerPair { get; }
+    public async Task<IReadOnlyList<GameEvent>> GetForUserAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ObjectId.TryParse(userId, out _))
+            return Array.Empty<GameEvent>();
 
-        /// <summary>Chance that one comparison is a tie.</summary>
-        public double TieProbabilityPerPair { get; }
+        return await _games
+            .Find(game => game.UserId == userId)
+            .SortByDescending(game => game.UpdatedAt)
+            .ToListAsync(cancellationToken);
+    }
 
-        /// <summary>Expected attacker casualties in this dice round.</summary>
-        public double ExpectedAttackerLosses => DicePairs * DefenderWinProbabilityPerPair;
+    public async Task<GameEvent?> GetByIdForUserAsync(
+        string gameId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ObjectId.TryParse(gameId, out _) || !ObjectId.TryParse(userId, out _))
+            return null;
 
-        /// <summary>Expected defender casualties in this dice round.</summary>
-        public double ExpectedDefenderLosses => DicePairs * AttackerWinProbabilityPerPair;
+        return await _games
+            .Find(game => game.Id == gameId && game.UserId == userId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 
-        /// <summary>Chance the attacker loses at least one soldier this round.</summary>
-        public double ProbabilityAttackerLosesSoldier =>
-            1d - Math.Pow(1d - DefenderWinProbabilityPerPair, DicePairs);
-
-        /// <summary>Chance the defender loses at least one soldier this round.</summary>
-        public double ProbabilityDefenderLosesSoldier =>
-            1d - Math.Pow(1d - AttackerWinProbabilityPerPair, DicePairs);
-
-        /// <summary>
-        /// Creates odds for a round containing the specified number of paired rolls.
-        /// For this game, each die is a fair six-sided die unless another side count is supplied.
-        /// </summary>
-        public BattleOdds(int dicePairs, int dieSides = DefaultDieSides)
+    public async Task<bool> ReplaceForUserAsync(
+        GameEvent game,
+        int expectedVersion,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(game.Id) ||
+            !ObjectId.TryParse(game.Id, out _) ||
+            !ObjectId.TryParse(game.UserId, out _))
         {
-            if (dicePairs < 0)
-                throw new ArgumentOutOfRangeException(nameof(dicePairs), "Dice pairs cannot be negative.");
-            if (dieSides < 2)
-                throw new ArgumentOutOfRangeException(nameof(dieSides), "A die must have at least two sides.");
-
-            DicePairs = dicePairs;
-            DieSides = dieSides;
-
-            // For two identical fair dice, either side wins with equal probability;
-            // ties account for one outcome per side of the die.
-            TieProbabilityPerPair = 1d / dieSides;
-            AttackerWinProbabilityPerPair = (1d - TieProbabilityPerPair) / 2d;
-            DefenderWinProbabilityPerPair = AttackerWinProbabilityPerPair;
+            return false;
         }
 
-        /// <summary>
-        /// Builds one-round odds using the game's rule that the attacker keeps
-        /// one soldier behind and both sides roll the same number of dice.
-        /// </summary>
-        public static BattleOdds ForArmies(int attackerSoldiers, int defenderSoldiers)
-        {
-            if (attackerSoldiers < 2)
-                throw new ArgumentOutOfRangeException(nameof(attackerSoldiers), "The attacker needs at least two soldiers.");
-            if (defenderSoldiers < 1)
-                throw new ArgumentOutOfRangeException(nameof(defenderSoldiers), "The defender needs at least one soldier.");
+        var previousVersion = game.Version;
+        var previousUpdatedAt = game.UpdatedAt;
+        game.Version = expectedVersion + 1;
+        game.UpdatedAt = DateTime.UtcNow;
 
-            int dicePairs = Math.Min(attackerSoldiers - 1, defenderSoldiers);
-            return new BattleOdds(dicePairs);
-        }
+        var filter = Builders<GameEvent>.Filter.Eq(item => item.Id, game.Id) &
+                     Builders<GameEvent>.Filter.Eq(item => item.UserId, game.UserId) &
+                     Builders<GameEvent>.Filter.Eq(item => item.Version, expectedVersion);
+
+        var result = await _games.ReplaceOneAsync(
+            filter,
+            game,
+            cancellationToken: cancellationToken);
+
+        if (result.ModifiedCount == 1)
+            return true;
+
+        game.Version = previousVersion;
+        game.UpdatedAt = previousUpdatedAt;
+        return false;
     }
 }
