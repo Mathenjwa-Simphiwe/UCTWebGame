@@ -1,4 +1,4 @@
-﻿using UCTWebGame.Models;
+using UCTWebGame.Models;
 
 namespace UCTWebGame.Engine;
 
@@ -37,7 +37,7 @@ public class GameEngine
             throw new InvalidOperationException("Not enough countries in the pool to start a game.");
 
         Shuffle(others);
-        var selected = new List<CountryState> { chosen };
+        var selected = new List<CountryInfo> { chosen };
         selected.AddRange(others.Take(9));
 
         var game = new GameEvent
@@ -46,7 +46,7 @@ public class GameEngine
             Status = GameStatus.InProgress,
             Round = 1,
             Phase = TurnPhase.Action,
-            CurrentTurns = 0
+            CurrentTurnIndex = 0
         };
 
         for (int i = 0; i < selected.Count; i++)
@@ -81,7 +81,7 @@ public class GameEngine
 
     // ---------- Turn flow ----------
 
-    public Player GetCurrentPlayer(GameEvent game) => GetPlayer(game, game.TurnOrder[game.CurrentTurns]);
+    public Player GetCurrentPlayer(GameEvent game) => GetPlayer(game, game.TurnOrder[game.CurrentTurnIndex]);
 
     // Ends the current turn and starts the next non-eliminated player's turn.
     public void AdvanceTurn(GameEvent game)
@@ -95,10 +95,10 @@ public class GameEngine
         int count = game.TurnOrder.Count;
         for (int step = 0; step < count; step++)
         {
-            game.CurrentTurns++;
-            if (game.CurrentTurns >= count)
+            game.CurrentTurnIndex++;
+            if (game.CurrentTurnIndex >= count)
             {
-                game.CurrentTurns = 0;
+                game.CurrentTurnIndex = 0;
                 game.Round++;
             }
             if (!GetCurrentPlayer(game).Eliminated) break;
