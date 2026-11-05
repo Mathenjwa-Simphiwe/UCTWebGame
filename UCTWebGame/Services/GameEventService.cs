@@ -4,7 +4,7 @@ using UCTWebGame.Models;
 
 namespace UCTWebGame.Services;
 
-public sealed class GameEventService
+public sealed class GameEventService : IGameEventService
 {
     private readonly IMongoCollection<GameEvent> _games;
 

@@ -14,12 +14,12 @@ namespace UCTWebGame.Controllers;
 [Route("api/games")]
 public sealed class GameController : ControllerBase
 {
-    private readonly GameEventService _gameService;
+    private readonly IGameEventService _gameService;
     private readonly GameEngine _gameEngine;
     private readonly IWebHostEnvironment _environment;
 
     public GameController(
-        GameEventService gameService,
+        IGameEventService gameService,
         GameEngine gameEngine,
         IWebHostEnvironment environment)
     {

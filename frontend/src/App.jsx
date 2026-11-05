@@ -1,122 +1,76 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import Layout from './components/Layout.jsx'
+import { AuthProvider, useAuth } from './context/AuthContext.jsx'
+import HomePage from './pages/HomePage.jsx'
+import CampaignPage from './pages/CampaignPage.jsx'
+import BattleMapPage from './pages/BattleMapPage.jsx'
+import FieldReportsPage from './pages/FieldReportsPage.jsx'
+import RulesPage from './pages/RulesPage.jsx'
+import AuthPage from './pages/AuthPage.jsx'
+import { getGames } from './api/gameApi.js'
 
-function App() {
-  const [count, setCount] = useState(0)
+function RoutedApp() {
+  const { token, signOut } = useAuth()
+  const [route, setRoute] = useState(window.location.hash.slice(1) || '/home')
+  const [games, setGames] = useState([])
+  const [activeGameId, setActiveGameId] = useState('')
+  const [error, setError] = useState('')
+  const activeGame = games.find((game) => game.id === activeGameId) ?? games[0] ?? null
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+  useEffect(() => {
+    const updateRoute = () => setRoute(window.location.hash.slice(1) || '/home')
+    window.addEventListener('hashchange', updateRoute)
+    return () => window.removeEventListener('hashchange', updateRoute)
+  }, [])
 
-      <div className="ticks"></div>
+  useEffect(() => {
+    if (!token) {
+      setGames([])
+      setActiveGameId('')
+      return
+    }
+    let alive = true
+    getGames().then((result) => {
+      if (!alive) return
+      const list = Array.isArray(result) ? result : []
+      setGames(list)
+      setActiveGameId((current) => list.some((game) => game.id === current) ? current : list[0]?.id ?? '')
+      setError('')
+    }).catch((requestError) => {
+      if (!alive) return
+      setError(requestError.message)
+      if (/401|unauthor/i.test(requestError.message)) signOut()
+    })
+    return () => { alive = false }
+  }, [token, signOut])
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+  const refreshGames = async () => {
+    if (!token) return []
+    const result = await getGames()
+    const list = Array.isArray(result) ? result : []
+    setGames(list)
+    return list
+  }
+  const saveGame = (game) => {
+    setGames((current) => [game, ...current.filter((item) => item.id !== game.id)])
+    setActiveGameId(game.id)
+  }
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  let page
+  if (route === '/login' || route === '/register') page = <AuthPage mode={route.slice(1)} />
+  else {
+    const props = { games, activeGame, setActiveGameId, refreshGames, saveGame, error }
+    switch (route) {
+      case '/campaign': page = <CampaignPage {...props} />; break
+      case '/battle-map': page = <BattleMapPage {...props} />; break
+      case '/field-reports': page = <FieldReportsPage {...props} />; break
+      case '/rules': page = <RulesPage />; break
+      default: page = <HomePage {...props} />
+    }
+  }
+  return <Layout route={route}>{page}</Layout>
 }
 
-export default App
+export default function App() {
+  return <AuthProvider><RoutedApp /></AuthProvider>
+}

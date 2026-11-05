@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -6,6 +7,18 @@ using UCTWebGame.Engine;
 using UCTWebGame.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Development runs with seeded accounts and in-memory games unless explicitly disabled.
+// Production never enables demo mode, even if the configuration key is set.
+var demoMode = builder.Environment.IsDevelopment() &&
+               builder.Configuration.GetValue("DemoMode:Enabled", defaultValue: true);
+if (demoMode && string.IsNullOrWhiteSpace(builder.Configuration["Jwt:Secret"]))
+{
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["Jwt:Secret"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48))
+    });
+}
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -52,14 +65,33 @@ var allowedOrigins = builder.Configuration
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod());
+    {
+        if (demoMode)
+        {
+            // Vite may choose a different local port when its default is occupied.
+            policy.SetIsOriginAllowed(origin =>
+                Uri.TryCreate(origin, UriKind.Absolute, out var uri) && uri.IsLoopback);
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
 });
 
-builder.Services.AddSingleton<MongoDbService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<GameEventService>();
+if (demoMode)
+{
+    builder.Services.AddSingleton<IAuthService, DemoAuthService>();
+    builder.Services.AddSingleton<IGameEventService, DemoGameEventService>();
+}
+else
+{
+    builder.Services.AddSingleton<MongoDbService>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<IGameEventService, GameEventService>();
+}
 builder.Services.AddSingleton<IDice, RandomDice>();
 builder.Services.AddSingleton<GameEngine>();
 
@@ -70,9 +102,16 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-await app.Services
-    .GetRequiredService<MongoDbService>()
-    .EnsureIndexesAsync();
+if (demoMode)
+{
+    app.Logger.LogWarning("DEMO MODE is enabled: accounts and games are temporary and stored in memory.");
+}
+else
+{
+    await app.Services
+        .GetRequiredService<MongoDbService>()
+        .EnsureIndexesAsync();
+}
 
 app.UseHttpsRedirection();
 app.UseCors();

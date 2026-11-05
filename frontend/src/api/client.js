@@ -1,7 +1,7 @@
 import { authenticatedFetch } from "../middleware/authMiddleware";
 
 const BASE_URL = (
-    import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5134/api"
+    import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5138/api"
 ).replace(/\/+$/, "");
 
 export async function request(path, options = {}) {
@@ -26,10 +26,12 @@ export async function request(path, options = {}) {
         : await response.text().catch(() => "");
 
     if (!response.ok) {
-        const validationMessage = body?.errors
-            ?.map((error) => error.msg)
-            .filter(Boolean)
-            .join(" ");
+        const validationErrors = body?.errors;
+        const validationMessage = Array.isArray(validationErrors)
+            ? validationErrors.map((error) => error.msg ?? error.message).filter(Boolean).join(" ")
+            : validationErrors && typeof validationErrors === "object"
+                ? Object.values(validationErrors).flat().filter(Boolean).join(" ")
+                : "";
         const message = body?.message ?? body?.title ?? validationMessage ?? body;
         throw new Error(
             typeof message === "string" && message.length > 0
