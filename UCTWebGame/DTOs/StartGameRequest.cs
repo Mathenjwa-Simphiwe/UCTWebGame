@@ -5,6 +5,6 @@ namespace UCTWebGame.DTOs;
 public sealed class StartGameRequest
 {
     [Required]
-    [StringLength(2, MinimumLength = 2)]
+    [StringLength(3, MinimumLength = 3)]
     public string ChosenCountryCode { get; set; } = string.Empty;
 }
