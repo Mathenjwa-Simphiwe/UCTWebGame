@@ -17,17 +17,20 @@ public sealed class GameController : ControllerBase
     private readonly IGameEventService _gameService;
     private readonly GameEngine _gameEngine;
     private readonly INpcService _npcService;
+    private readonly ICommentaryService _commentary;
     private readonly IWebHostEnvironment _environment;
 
     public GameController(
         IGameEventService gameService,
         GameEngine gameEngine,
         INpcService npcService,
+        ICommentaryService commentary,
         IWebHostEnvironment environment)
     {
         _gameService = gameService;
         _gameEngine = gameEngine;
         _npcService = npcService;
+        _commentary = commentary;
         _environment = environment;
     }
 
@@ -150,10 +153,21 @@ public sealed class GameController : ControllerBase
             return loaded.Error;
 
         var game = loaded.Game!;
+
+        // Read the names BEFORE the roll: a conquest clears game.PendingAttack.
+        var attackerName = game.Countries.FirstOrDefault(c => c.Code == game.PendingAttack?.AttackerCode)?.Name ?? "The attacker";
+        var defenderName = game.Countries.FirstOrDefault(c => c.Code == game.PendingAttack?.DefenderCode)?.Name ?? "the defender";
+
         return await CommitActionAsync(
             game,
             () => _gameEngine.ResolveDiceRound(game),
-            cancellationToken);
+            cancellationToken,
+            async result =>
+            {
+                if (result is null) return null;
+                var input = CommentaryFacts.ForDiceRound(attackerName, defenderName, result);
+                return await _commentary.GenerateAsync(input.Facts, input.Fallback, cancellationToken);
+            });
     }
 
     [HttpPost("{gameId}/attack/stop")]
@@ -260,7 +274,8 @@ public sealed class GameController : ControllerBase
     private async Task<IActionResult> CommitActionAsync(
         GameEvent game,
         Func<RoundResult?> mutation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<RoundResult?, Task<string?>>? buildCommentary = null)
     {
         var expectedVersion = game.Version;
         RoundResult? roundResult;
@@ -281,7 +296,8 @@ public sealed class GameController : ControllerBase
         if (!saved)
             return Conflict(new { message = "This campaign changed in another request. Reload it and try again." });
 
-        return Ok(new GameActionResponse(game, roundResult));
+        var commentary = buildCommentary is null ? null : await buildCommentary(roundResult);
+        return Ok(new GameActionResponse(game, roundResult, commentary));
     }
 
     private static Player HumanPlayer(GameEvent game) =>

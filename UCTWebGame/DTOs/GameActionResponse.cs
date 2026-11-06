@@ -3,4 +3,4 @@ using UCTWebGame.Models;
 
 namespace UCTWebGame.DTOs;
 
-public sealed record GameActionResponse(GameEvent Game, RoundResult? RoundResult = null);
+public sealed record GameActionResponse(GameEvent Game, RoundResult? RoundResult = null, string? Commentary = null);

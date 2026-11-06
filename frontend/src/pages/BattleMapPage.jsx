@@ -25,6 +25,7 @@ export default function BattleMapPage({ activeGame, games, setActiveGameId, save
   const [transferAmount, setTransferAmount] = useState(1)
   const [reinforcementCountry, setReinforcementCountry] = useState('')
   const [battleResult, setBattleResult] = useState(null)
+  const [commentary, setCommentary] = useState('')
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -70,6 +71,7 @@ export default function BattleMapPage({ activeGame, games, setActiveGameId, save
     setTransferTo('')
     setReinforcementCountry('')
     setBattleResult(null)
+    setCommentary('')
     setNotice('')
     setError('')
   }, [activeGame?.id])
@@ -95,6 +97,7 @@ export default function BattleMapPage({ activeGame, games, setActiveGameId, save
       const response = await action(activeGame.id)
       saveGame(response.game)
       setBattleResult(response.roundResult ?? null)
+      setCommentary(response.commentary ?? '')
       setNotice(successMessage(response))
     } catch (requestError) {
       setError(requestError.message)
@@ -200,6 +203,7 @@ export default function BattleMapPage({ activeGame, games, setActiveGameId, save
             <span>Defence dice: {battleResult.defenderDice?.join(', ') || '—'}</span>
             <span>Losses · you {battleResult.attackerLosses}, rival {battleResult.defenderLosses}</span>
             {battleResult.soldiersGained > 0 && <span>Conquest garrison: {battleResult.soldiersGained}</span>}
+            {commentary && <p className="commentary">“{commentary}”</p>}
           </div>}
           {notice && <p className="action-notice">{notice}</p>}
           {error && <p className="error-banner action-error" role="alert">{error}</p>}
