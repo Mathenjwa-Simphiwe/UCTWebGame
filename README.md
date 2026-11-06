@@ -10,7 +10,7 @@ URL LINK- https://uct-risk-game.onrender.com/
 - Node.js and npm (use a current Node.js LTS release)
 - MongoDB Atlas only if you want persistent database storage; demo mode does not require MongoDB
 
-## Run the demo locally
+## Run the demo locally(ONLY IF DEPLOYED APPS API is offline)
 
 Demo mode is enabled by default for the included Development launch profiles. It uses seeded accounts and stores accounts and games in memory, so that data resets when the API stops.
 
