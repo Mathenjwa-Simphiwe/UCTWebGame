@@ -94,6 +94,7 @@ else
 }
 builder.Services.AddSingleton<IDice, RandomDice>();
 builder.Services.AddSingleton<GameEngine>();
+builder.Services.AddSingleton<INpcService, NpcService>();
 
 var app = builder.Build();
 

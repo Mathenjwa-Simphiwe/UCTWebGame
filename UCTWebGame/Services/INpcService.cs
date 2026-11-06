@@ -1,6 +1,8 @@
-﻿namespace UCTWebGame.Services
+using UCTWebGame.Models;
+
+namespace UCTWebGame.Services;
+
+public interface INpcService
 {
-    public interface INpcService
-    {
-    }
+    void PlayUntilHumanTurn(GameEvent game);
 }

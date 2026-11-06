@@ -73,8 +73,9 @@ public class GameEngine
             });
         }
 
-        game.TurnOrder = game.Players.Select(p => p.Id).ToList();
-        Shuffle(game.TurnOrder);   // random first player
+        game.TurnOrder = game.Players.Skip(1).Select(p => p.Id).ToList();
+        Shuffle(game.TurnOrder);
+        game.TurnOrder.Insert(0, game.Players[0].Id); // the human gets the opening turn
 
         return game;
     }

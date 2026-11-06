@@ -23,8 +23,8 @@ public sealed class DemoGameEventService : IGameEventService
         game.CreatedAt = DateTime.UtcNow;
         game.UpdatedAt = game.CreatedAt;
         game.Version = 1;
-        _games[game.Id] = game;
-        return Task.FromResult(game);
+        _games[game.Id] = Clone(game);
+        return Task.FromResult(Clone(game));
     }
 
     public Task<IReadOnlyList<GameEvent>> GetForUserAsync(
@@ -35,6 +35,7 @@ public sealed class DemoGameEventService : IGameEventService
         IReadOnlyList<GameEvent> games = _games.Values
             .Where(game => game.UserId == userId)
             .OrderByDescending(game => game.UpdatedAt)
+            .Select(Clone)
             .ToArray();
         return Task.FromResult(games);
     }
@@ -46,7 +47,7 @@ public sealed class DemoGameEventService : IGameEventService
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_games.TryGetValue(gameId, out var game) && game.UserId == userId)
-            return Task.FromResult<GameEvent?>(game);
+            return Task.FromResult<GameEvent?>(Clone(game));
 
         return Task.FromResult<GameEvent?>(null);
     }
@@ -69,8 +70,11 @@ public sealed class DemoGameEventService : IGameEventService
 
             game.Version = expectedVersion + 1;
             game.UpdatedAt = DateTime.UtcNow;
-            _games[game.Id] = game;
+            _games[game.Id] = Clone(game);
             return Task.FromResult(true);
         }
     }
+
+    private static GameEvent Clone(GameEvent game) =>
+        MongoDB.Bson.Serialization.BsonSerializer.Deserialize<GameEvent>(game.ToBson());
 }
