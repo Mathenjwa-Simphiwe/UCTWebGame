@@ -53,7 +53,9 @@ public sealed class GameController : ControllerBase
                 userId,
                 request.ChosenCountryCode.Trim().ToUpperInvariant(),
                 countries);
-            _npcService.PlayUntilHumanTurn(game);
+            var startLog = _npcService.PlayUntilHumanTurn(game);
+            await AddCommentaryAsync(game, startLog, cancellationToken);
+            GameLog.Append(game, startLog);
 
             var savedGame = await _gameService.CreateAsync(game, cancellationToken);
             return CreatedAtAction(nameof(GetGame), new { gameId = savedGame.Id }, savedGame);
@@ -279,15 +281,21 @@ public sealed class GameController : ControllerBase
     {
         var expectedVersion = game.Version;
         RoundResult? roundResult;
+        List<CountryChange> baseline;
+        List<GameLogEntry> newLog;
         try
         {
             roundResult = mutation();
-            _npcService.PlayUntilHumanTurn(game);
+            baseline = GameLog.Snapshot(game);                      // the board before any NPC moves
+            newLog = _npcService.PlayUntilHumanTurn(game);          // NPC turns, each with a justification
         }
         catch (InvalidOperationException exception)
         {
             return BadRequest(new { message = exception.Message });
         }
+
+        await AddCommentaryAsync(game, newLog, cancellationToken);
+        GameLog.Append(game, newLog);
 
         var saved = await _gameService.ReplaceForUserAsync(
             game,
@@ -297,7 +305,24 @@ public sealed class GameController : ControllerBase
             return Conflict(new { message = "This campaign changed in another request. Reload it and try again." });
 
         var commentary = buildCommentary is null ? null : await buildCommentary(roundResult);
-        return Ok(new GameActionResponse(game, roundResult, commentary));
+        return Ok(new GameActionResponse(game, roundResult, commentary, newLog, baseline));
+    }
+
+    // Commentary on every dice round (the LLM is used when the free-tier gap allows, templates otherwise).
+    private async Task AddCommentaryAsync(
+        GameEvent game,
+        IEnumerable<GameLogEntry> entries,
+        CancellationToken cancellationToken)
+    {
+        foreach (var entry in entries)
+        {
+            if (entry.Type != LogTypes.DiceRound || entry.Result is null) continue;
+
+            var attacker = game.Countries.FirstOrDefault(c => c.Code == entry.AttackerCode)?.Name ?? "The attacker";
+            var defender = game.Countries.FirstOrDefault(c => c.Code == entry.DefenderCode)?.Name ?? "the defender";
+            var input = CommentaryFacts.ForDiceRound(attacker, defender, entry.Result);
+            entry.Commentary = await _commentary.GenerateAsync(input.Facts, input.Fallback, cancellationToken);
+        }
     }
 
     private static Player HumanPlayer(GameEvent game) =>

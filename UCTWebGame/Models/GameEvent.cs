@@ -35,4 +35,7 @@ public class GameEvent
     public bool AttackUsedThisTurn { get; set; }
     public string? WinnerId { get; set; }
     public int LastSequence { get; set; }
+
+    // Battle log (latest entries only). Shown on the battle page and to anyone watching.
+    public List<GameLogEntry> Log { get; set; } = new();
 }

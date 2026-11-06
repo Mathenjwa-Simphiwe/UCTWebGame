@@ -4,5 +4,7 @@ namespace UCTWebGame.Services;
 
 public interface INpcService
 {
-    void PlayUntilHumanTurn(GameEvent game);
+    // Plays NPC turns until it is the human's turn (or the game ends) and returns what happened,
+    // in order, with a short justification for every decision.
+    List<GameLogEntry> PlayUntilHumanTurn(GameEvent game);
 }
