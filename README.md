@@ -2,15 +2,26 @@
 
 A browser-based RISK game with a React frontend and an ASP.NET Core API. The API handles authentication, game state, player actions, and NPC turns. It can use seeded in-memory demo data or MongoDB for persistent users and games.
 
-URL LINK- https://uct-risk-game.onrender.com/
+**Live app:** https://uct-risk-game.onrender.com/
 
-## Requirements
+> **Using the live app**
+> - The API is hosted on Render's free tier and spins down when idle. The first request after a quiet period (including signing in or registering) can take 30–60 seconds. Wait for it to wake up and try again if the first attempt fails.
+> - The demo accounts listed below only work when running locally. On the live site, click **Create an account** to register; accounts and games are stored in MongoDB Atlas.
+
+## Tech stack
+
+- Frontend: React + Vite
+- API: ASP.NET Core (.NET 10), JWT authentication
+- Database: MongoDB Atlas
+- Hosting: Render (static site for the frontend, Docker web service for the API)
+
+## Requirements (for running locally)
 
 - .NET 10 SDK
 - Node.js and npm (use a current Node.js LTS release)
 - MongoDB Atlas only if you want persistent database storage; demo mode does not require MongoDB
 
-## Run the demo locally(ONLY IF DEPLOYED APPS API is offline)
+## Run locally (for development, or if the hosted API is offline)
 
 Demo mode is enabled by default for the included Development launch profiles. It uses seeded accounts and stores accounts and games in memory, so that data resets when the API stops.
 
@@ -44,7 +55,7 @@ Demo mode is enabled by default for the included Development launch profiles. It
 
    The sign-in screen provides demo-account buttons while running through Vite in development mode.
 
-## Use MongoDB Atlas for persistent data (optional)
+## Use MongoDB Atlas for persistent data locally (optional)
 
 The API uses demo mode by default in Development. To use MongoDB instead, configure the API's .NET User Secrets from the repository root. Keep the Atlas connection string and JWT secret private; do not commit them or put them in frontend environment variables.
 
@@ -74,10 +85,39 @@ Then run the frontend as shown above. New registrations and games will be stored
 - `MongoDb:ConnectionString` — MongoDB connection string; use User Secrets locally.
 - `MongoDb:DatabaseName` — database name used by the API.
 - `Jwt:Secret` — private signing key, at least 32 UTF-8 bytes.
-- `DemoMode:Enabled` — set to `false` to use MongoDB in Development. Demo mode is only enabled in the Development environment.
+- `DemoMode:Enabled` — set to `false` to use MongoDB in Development. Demo mode is only enabled in the Development environment, so a deployed (Production) API always uses MongoDB.
 - `Cors:AllowedOrigins:0` — allowed frontend origin when demo mode is disabled. The Vite config uses port `51493`.
 - `VITE_API_BASE_URL` — optional frontend API base URL; defaults to `http://localhost:5138/api`.
 - `Gemini:ApiKey` — optional API key for Gemini-powered commentary. The game has fallback commentary if no key is configured.
+
+## Deployment (Render)
+
+The app is deployed as two Render services. Real values for the variables below are set in the Render dashboard and are never committed to this repository.
+
+### API — Render Web Service (Docker)
+
+Built from the `Dockerfile` in the repository root. Environment variables (Render uses `__` in place of `:`):
+
+| Variable | Purpose |
+| --- | --- |
+| `MongoDb__ConnectionString` | MongoDB Atlas connection string |
+| `MongoDb__DatabaseName` | Database name (`UCTWebGame`) |
+| `Jwt__Secret` | Private JWT signing key, at least 32 characters |
+| `Cors__AllowedOrigins__0` | Deployed frontend origin, e.g. `https://uct-risk-game.onrender.com` (no trailing slash) |
+| `Gemini__ApiKey` | Optional, for Gemini commentary |
+
+MongoDB Atlas must allow connections from Render. Render's free tier has no fixed outbound IP, so the Atlas IP Access List needs `0.0.0.0/0`, and the database user needs read/write access to the database.
+
+### Frontend — Render Static Site
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | `frontend` |
+| Build Command | `npm install && npm run build` |
+| Publish Directory | `dist` |
+| `VITE_API_BASE_URL` | `https://<your-api-service>.onrender.com/api` |
+
+`VITE_API_BASE_URL` is read at build time, so redeploy the frontend after changing it. Routing is hash-based (`#/login`), so no rewrite rule is needed.
 
 ## Useful commands
 
@@ -93,7 +133,6 @@ Build the frontend:
 cd frontend
 npm run build
 ```
--AI Was Used in the making of this project
 
 Run the frontend linter:
 
@@ -101,3 +140,7 @@ Run the frontend linter:
 cd frontend
 npm run lint
 ```
+
+## AI usage
+
+AI was used in the making of this project.
