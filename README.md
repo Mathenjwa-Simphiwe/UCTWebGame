@@ -2,6 +2,8 @@
 
 A browser-based RISK game with a React frontend and an ASP.NET Core API. The API handles authentication, game state, player actions, and NPC turns. It can use seeded in-memory demo data or MongoDB for persistent users and games.
 
+URL LINK- https://uct-risk-game.onrender.com/
+
 ## Requirements
 
 - .NET 10 SDK
