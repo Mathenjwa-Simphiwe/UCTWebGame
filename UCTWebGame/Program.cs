@@ -95,6 +95,11 @@ else
 builder.Services.AddSingleton<IDice, RandomDice>();
 builder.Services.AddSingleton<GameEngine>();
 builder.Services.AddSingleton<INpcService, NpcService>();
+builder.Services.AddHttpClient<ICommentaryService, GeminiCommentaryService>(c =>
+{
+    c.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+    c.Timeout = TimeSpan.FromSeconds(10);
+});
 
 var app = builder.Build();
 
