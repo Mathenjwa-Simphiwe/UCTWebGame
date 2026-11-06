@@ -93,6 +93,7 @@ Build the frontend:
 cd frontend
 npm run build
 ```
+-AI Was Used in the making of this project
 
 Run the frontend linter:
 
